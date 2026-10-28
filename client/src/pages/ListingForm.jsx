@@ -80,7 +80,7 @@ export default function ListingForm() {
       pickupAddress: formData.pickupAddress.trim(),
       city: formData.city.trim(),
       expiresAt: new Date(formData.expiresAt).toISOString(),
-      notes: formData.notes ? formData.notes.trim() : undefined,
+      notes: formData.notes.trim(),
     };
 
     setSubmitting(true);

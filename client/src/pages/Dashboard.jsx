@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import ListingCard from '../components/ListingCard';
@@ -19,7 +19,7 @@ export default function Dashboard({ user }) {
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
-  const fetchMyListings = useCallback(async () => {
+  const fetchMyListings = async () => {
     try {
       setLoadingMine(true);
       const res = await api.get('/listings/mine');
@@ -30,9 +30,9 @@ export default function Dashboard({ user }) {
     } finally {
       setLoadingMine(false);
     }
-  }, []);
+  };
 
-  const fetchAvailableListings = useCallback(async (city = cityFilter) => {
+  const fetchAvailableListings = async (city = cityFilter) => {
     try {
       setLoadingAvailable(true);
       const query = city ? `?city=${encodeURIComponent(city.trim())}` : '';
@@ -44,19 +44,13 @@ export default function Dashboard({ user }) {
     } finally {
       setLoadingAvailable(false);
     }
-  }, [cityFilter]);
+  };
 
-  // Initial fetch based on role
+  // Load once when the dashboard opens; the city filter only refetches on submit
   useEffect(() => {
-    setActionError('');
-    setActionSuccess('');
-    if (isDonor) {
-      fetchMyListings();
-    } else {
-      fetchAvailableListings(user?.city || '');
-      fetchMyListings();
-    }
-  }, [isDonor, user?.city, fetchMyListings, fetchAvailableListings]);
+    if (!isDonor) fetchAvailableListings(user?.city || '');
+    fetchMyListings();
+  }, []);
 
   // Donor Action: Delete listing
   const handleDelete = async (id) => {

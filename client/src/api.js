@@ -12,4 +12,17 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// If a logged-in request comes back 401, the token has expired: log out and go to the login page
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    if (err.response?.status === 401 && err.config?.headers?.Authorization) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      window.location.href = '/login';
+    }
+    return Promise.reject(err);
+  }
+);
+
 export default api;

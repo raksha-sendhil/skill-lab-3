@@ -18,7 +18,9 @@ function formatTimeLeft(expiresAt) {
 }
 
 export default function ListingCard({ listing, children }) {
-  const timeLeft = formatTimeLeft(listing.expiresAt);
+  // A countdown only makes sense while the food is still waiting to be collected
+  const isActive = listing.status === 'available' || listing.status === 'claimed';
+  const timeLeft = isActive ? formatTimeLeft(listing.expiresAt) : '';
   const statusLabel = listing.status ? listing.status.replace('_', ' ') : 'available';
 
   return (

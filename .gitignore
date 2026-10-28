@@ -1,0 +1,7 @@
+node_modules/
+.env
+dist/
+
+# planning docs are kept outside the repo
+plan.md
+feature-spec.md

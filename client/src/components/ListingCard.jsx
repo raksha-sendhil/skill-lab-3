@@ -1,73 +1,80 @@
 import React from 'react';
+import Icon from './Icon';
 
-function formatTimeLeft(expiresAt) {
-  const diff = new Date(expiresAt).getTime() - Date.now();
-  if (diff <= 0) return 'Expired';
-  const totalMinutes = Math.floor(diff / (1000 * 60));
+const FOOD_LABELS = { veg: 'Veg', 'non-veg': 'Non-veg', mixed: 'Mixed' };
+const STATUS_LABELS = {
+  available: 'Available',
+  claimed: 'Claimed',
+  picked_up: 'Picked up',
+  expired: 'Expired',
+};
+
+function timeLeft(expiresAt) {
+  const totalMinutes = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 60000);
+  if (totalMinutes <= 0) return { text: 'Pickup window closed', urgent: true };
+
   const days = Math.floor(totalMinutes / (60 * 24));
   const hours = Math.floor((totalMinutes % (60 * 24)) / 60);
   const mins = totalMinutes % 60;
-
-  if (days > 0) {
-    return `Pickup within ${days}d ${hours}h`;
-  }
-  if (hours > 0) {
-    return `Pickup within ${hours}h ${mins}m`;
-  }
-  return `Pickup within ${mins}m`;
+  const text = days > 0 ? `${days}d ${hours}h` : hours > 0 ? `${hours}h ${mins}m` : `${mins}m`;
+  return { text: `Pick up within ${text}`, urgent: totalMinutes < 120 };
 }
 
-export default function ListingCard({ listing, children }) {
+// contact: which person's details to show, 'donor' (for NGOs) or 'claimer' (for donors)
+export default function ListingCard({ listing, contact, children }) {
   // A countdown only makes sense while the food is still waiting to be collected
   const isActive = listing.status === 'available' || listing.status === 'claimed';
-  const timeLeft = isActive ? formatTimeLeft(listing.expiresAt) : '';
-  const statusLabel = listing.status ? listing.status.replace('_', ' ') : 'available';
+  const deadline = isActive ? timeLeft(listing.expiresAt) : null;
+  const person = contact === 'donor' ? listing.donor : listing.claimedBy;
 
   return (
     <article className="listing-card">
-      <div>
-        <header>
-          <div>
-            <span className="food-type-tag">{listing.foodType}</span>
-            <span className={`badge badge-${listing.status || 'available'}`}>
-              {statusLabel}
-            </span>
-          </div>
-          <small style={{ color: 'var(--pico-muted-color)' }}>{timeLeft}</small>
-        </header>
-
-        <h4 style={{ marginBottom: '0.5rem' }}>{listing.title}</h4>
-
-        <p style={{ marginBottom: '0.5rem' }}>
-          <strong>Servings:</strong> {listing.servings}
-        </p>
-
-        <p style={{ marginBottom: '0.5rem' }}>
-          <strong>Location:</strong> {listing.pickupAddress}, {listing.city}
-        </p>
-
-        {listing.notes && (
-          <p style={{ marginBottom: '0.5rem', fontStyle: 'italic', fontSize: '0.9rem' }}>
-            <strong>Notes:</strong> {listing.notes}
-          </p>
-        )}
-
-        {listing.donor && listing.donor.name && (
-          <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-            <strong>Donor:</strong> {listing.donor.name}
-            {listing.donor.phone && ` (${listing.donor.phone})`}
-          </p>
-        )}
-
-        {listing.claimedBy && listing.claimedBy.name && (
-          <p style={{ marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-            <strong>Claimed by:</strong> {listing.claimedBy.name}
-            {listing.claimedBy.phone && ` (${listing.claimedBy.phone})`}
-          </p>
-        )}
+      <div className="listing-top">
+        <span className={`food-mark food-${listing.foodType}`}>
+          <i />
+          {FOOD_LABELS[listing.foodType]}
+        </span>
+        <span className={`badge badge-${listing.status}`}>{STATUS_LABELS[listing.status]}</span>
       </div>
 
-      {children && <div className="listing-actions">{children}</div>}
+      <h3 className="listing-title">{listing.title}</h3>
+
+      <ul className="listing-meta">
+        <li>
+          <Icon name="users" size={16} />
+          {listing.servings} servings
+        </li>
+        <li>
+          <Icon name="pin" size={16} />
+          {listing.pickupAddress}, {listing.city}
+        </li>
+        {deadline && (
+          <li className={deadline.urgent ? 'urgent' : ''}>
+            <Icon name="clock" size={16} />
+            {deadline.text}
+          </li>
+        )}
+      </ul>
+
+      {listing.notes && <p className="listing-notes">{listing.notes}</p>}
+
+      {(person || children) && (
+        <div className="listing-foot">
+          {person && (
+            <div className="contact">
+              <div>
+                <small>{contact === 'donor' ? 'Donor' : 'Claimed by'}</small>
+                <strong>{person.name}</strong>
+              </div>
+              <a href={`tel:${person.phone}`}>
+                <Icon name="phone" size={14} />
+                {person.phone}
+              </a>
+            </div>
+          )}
+          {children && <div className="listing-actions">{children}</div>}
+        </div>
+      )}
     </article>
   );
 }

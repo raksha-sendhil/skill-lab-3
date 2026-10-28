@@ -1,6 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
+import Icon from '../components/Icon';
+
+const ROLES = [
+  { value: 'donor', label: 'Donor', hint: 'Restaurant, hostel, caterer', icon: 'building' },
+  { value: 'ngo', label: 'NGO', hint: 'Shelter, food bank, kitchen', icon: 'heart' },
+];
 
 export default function Register({ onLogin }) {
   const navigate = useNavigate();
@@ -28,22 +34,53 @@ export default function Register({ onLogin }) {
       onLogin(res.data.token, res.data.user);
       navigate('/dashboard');
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Registration failed. Please try again.'
-      );
+      setError(err.response?.data?.message || 'Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="container" style={{ maxWidth: '550px', padding: '2rem 0' }}>
-      <article>
-        <h2>Register</h2>
-        {error && <div className="error-message">{error}</div>}
+    <main className="auth-page">
+      <div className="auth-card auth-card-wide">
+        <span className="brand-mark brand-mark-lg">
+          <Icon name="leaf" size={22} />
+        </span>
+        <h1>Create your account</h1>
+        <p className="auth-sub">Join as a donor sharing food, or an NGO collecting it.</p>
+
+        {error && (
+          <div className="alert alert-error" role="alert">
+            <Icon name="alert" size={18} />
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
+          <fieldset className="role-picker">
+            <legend>I am a</legend>
+            {ROLES.map((r) => (
+              <label key={r.value} className={`role-option ${formData.role === r.value ? 'selected' : ''}`}>
+                <input
+                  type="radio"
+                  name="role"
+                  value={r.value}
+                  checked={formData.role === r.value}
+                  onChange={handleChange}
+                />
+                <span className="role-icon">
+                  <Icon name={r.icon} size={20} />
+                </span>
+                <span>
+                  <strong>{r.label}</strong>
+                  <small>{r.hint}</small>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+
           <label htmlFor="name">
-            Organization / Name
+            {formData.role === 'ngo' ? 'Organisation name' : 'Business or organisation name'}
             <input
               type="text"
               id="name"
@@ -51,7 +88,7 @@ export default function Register({ onLogin }) {
               value={formData.name}
               onChange={handleChange}
               required
-              placeholder="e.g. Annapoorna Restaurant or Hope Shelter"
+              placeholder={formData.role === 'ngo' ? 'e.g. Hope Shelter' : 'e.g. Hotel Annapoorna'}
             />
           </label>
 
@@ -64,7 +101,8 @@ export default function Register({ onLogin }) {
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="name@example.com"
+              placeholder="you@example.com"
+              autoComplete="email"
             />
           </label>
 
@@ -78,6 +116,8 @@ export default function Register({ onLogin }) {
               onChange={handleChange}
               required
               minLength={6}
+              placeholder="At least 6 characters"
+              autoComplete="new-password"
             />
           </label>
 
@@ -109,31 +149,15 @@ export default function Register({ onLogin }) {
             </label>
           </div>
 
-          <label htmlFor="role">
-            Role
-            <select
-              id="role"
-              name="role"
-              value={formData.role}
-              onChange={handleChange}
-              required
-            >
-              <option value="donor">Donor (Restaurant, Mess, Caterer, etc.)</option>
-              <option value="ngo">NGO (Shelter, Food Bank, Kitchen, etc.)</option>
-            </select>
-          </label>
-
-          <button type="submit" aria-busy={loading} disabled={loading}>
-            {loading ? 'Creating account...' : 'Register'}
+          <button type="submit" className="btn btn-primary btn-block btn-lg" aria-busy={loading} disabled={loading}>
+            {loading ? 'Creating account…' : 'Create account'}
           </button>
         </form>
 
-        <footer style={{ marginTop: '1rem', textAlign: 'center' }}>
-          <small>
-            Already have an account? <Link to="/login">Login here</Link>
-          </small>
-        </footer>
-      </article>
+        <p className="auth-footer">
+          Already have an account? <Link to="/login">Log in</Link>
+        </p>
+      </div>
     </main>
   );
 }

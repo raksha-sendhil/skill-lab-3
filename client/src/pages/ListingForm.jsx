@@ -1,17 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import api from '../api';
+import Icon from '../components/Icon';
 
-function toDatetimeLocal(isoString) {
-  if (!isoString) return '';
-  const d = new Date(isoString);
+// Formats a date for <input type="datetime-local"> in the user's local time
+function toDatetimeLocal(value) {
+  if (!value) return '';
+  const d = new Date(value);
   const pad = (num) => String(num).padStart(2, '0');
-  const yyyy = d.getFullYear();
-  const MM = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const mm = pad(d.getMinutes());
-  return `${yyyy}-${MM}-${dd}T${hh}:${mm}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export default function ListingForm() {
@@ -50,9 +47,7 @@ export default function ListingForm() {
           });
         })
         .catch((err) => {
-          setError(
-            err.response?.data?.message || 'Failed to load listing for editing.'
-          );
+          setError(err.response?.data?.message || 'Failed to load listing for editing.');
         })
         .finally(() => {
           setLoading(false);
@@ -92,9 +87,7 @@ export default function ListingForm() {
       }
       navigate('/dashboard');
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Failed to save listing. Please check input.'
-      );
+      setError(err.response?.data?.message || 'Failed to save listing. Please check input.');
     } finally {
       setSubmitting(false);
     }
@@ -102,21 +95,38 @@ export default function ListingForm() {
 
   if (loading) {
     return (
-      <main className="container" style={{ padding: '2rem 0' }}>
-        <p aria-busy="true">Loading listing details...</p>
+      <main className="container page form-page">
+        <p className="loading" aria-busy="true">Loading listing details…</p>
       </main>
     );
   }
 
   return (
-    <main className="container" style={{ maxWidth: '650px', padding: '2rem 0' }}>
-      <article>
-        <h2>{isEditMode ? 'Edit Food Listing' : 'Post Surplus Food'}</h2>
-        {error && <div className="error-message">{error}</div>}
+    <main className="container page form-page">
+      <Link to="/dashboard" className="back-link">
+        <Icon name="arrowLeft" size={16} />
+        Back to dashboard
+      </Link>
+
+      <div className="form-card">
+        <h1>{isEditMode ? 'Edit listing' : 'Post surplus food'}</h1>
+        <p className="form-sub">
+          {isEditMode
+            ? 'Update the details while the listing is still available.'
+            : 'NGOs in your city will see this listing until the pickup deadline.'}
+        </p>
+
+        {error && (
+          <div className="alert alert-error" role="alert">
+            <Icon name="alert" size={18} />
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit}>
+          <h2 className="form-section-title">Food details</h2>
           <label htmlFor="title">
-            Food Title / Description
+            What food is available?
             <input
               type="text"
               id="title"
@@ -130,22 +140,16 @@ export default function ListingForm() {
 
           <div className="grid">
             <label htmlFor="foodType">
-              Food Type
-              <select
-                id="foodType"
-                name="foodType"
-                value={formData.foodType}
-                onChange={handleChange}
-                required
-              >
+              Food type
+              <select id="foodType" name="foodType" value={formData.foodType} onChange={handleChange} required>
                 <option value="veg">Veg</option>
-                <option value="non-veg">Non-Veg</option>
+                <option value="non-veg">Non-veg</option>
                 <option value="mixed">Mixed</option>
               </select>
             </label>
 
             <label htmlFor="servings">
-              Approximate Servings
+              Servings
               <input
                 type="number"
                 id="servings"
@@ -158,6 +162,22 @@ export default function ListingForm() {
               />
             </label>
           </div>
+
+          <hr className="form-divider" />
+
+          <h2 className="form-section-title">Pickup</h2>
+          <label htmlFor="pickupAddress">
+            Pickup address
+            <textarea
+              id="pickupAddress"
+              name="pickupAddress"
+              rows="2"
+              value={formData.pickupAddress}
+              onChange={handleChange}
+              placeholder="e.g. 12 MG Road, ground floor kitchen"
+              required
+            />
+          </label>
 
           <div className="grid">
             <label htmlFor="city">
@@ -174,62 +194,41 @@ export default function ListingForm() {
             </label>
 
             <label htmlFor="expiresAt">
-              Pickup Deadline
+              Pickup deadline
               <input
                 type="datetime-local"
                 id="expiresAt"
                 name="expiresAt"
                 value={formData.expiresAt}
+                min={toDatetimeLocal(new Date())}
                 onChange={handleChange}
                 required
               />
             </label>
           </div>
 
-          <label htmlFor="pickupAddress">
-            Full Pickup Address
-            <textarea
-              id="pickupAddress"
-              name="pickupAddress"
-              rows="2"
-              value={formData.pickupAddress}
-              onChange={handleChange}
-              placeholder="e.g. 12 MG Road, Ground Floor Kitchen"
-              required
-            />
-          </label>
-
           <label htmlFor="notes">
-            Optional Notes
+            Notes <span className="optional">(optional)</span>
             <input
               type="text"
               id="notes"
               name="notes"
               value={formData.notes}
               onChange={handleChange}
-              placeholder="e.g. Bring your own containers, call before arrival"
+              placeholder="e.g. Bring your own containers"
             />
           </label>
 
-          <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            <button type="submit" aria-busy={submitting} disabled={submitting}>
-              {submitting
-                ? 'Saving...'
-                : isEditMode
-                ? 'Update Listing'
-                : 'Publish Listing'}
-            </button>
-            <Link
-              to="/dashboard"
-              role="button"
-              className="secondary outline"
-              style={{ width: 'auto' }}
-            >
+          <div className="form-actions">
+            <Link to="/dashboard" className="btn btn-secondary">
               Cancel
             </Link>
+            <button type="submit" className="btn btn-primary" aria-busy={submitting} disabled={submitting}>
+              {submitting ? 'Saving…' : isEditMode ? 'Save changes' : 'Publish listing'}
+            </button>
           </div>
         </form>
-      </article>
+      </div>
     </main>
   );
 }

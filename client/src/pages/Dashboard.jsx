@@ -2,11 +2,28 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api';
 import ListingCard from '../components/ListingCard';
+import Icon from '../components/Icon';
+
+const STATUSES = [
+  ['available', 'Available'],
+  ['claimed', 'Claimed'],
+  ['picked_up', 'Picked up'],
+  ['expired', 'Expired'],
+];
+
+function EmptyState({ children }) {
+  return (
+    <div className="empty">
+      <Icon name="inbox" size={28} />
+      <p>{children}</p>
+    </div>
+  );
+}
 
 export default function Dashboard({ user }) {
   const isDonor = user?.role === 'donor';
 
-  // Donor state
+  // Donor: own listings. NGO: own claims.
   const [myListings, setMyListings] = useState([]);
   const [loadingMine, setLoadingMine] = useState(true);
 
@@ -15,7 +32,6 @@ export default function Dashboard({ user }) {
   const [availableListings, setAvailableListings] = useState([]);
   const [loadingAvailable, setLoadingAvailable] = useState(true);
 
-  // General error/action state
   const [actionError, setActionError] = useState('');
   const [actionSuccess, setActionSuccess] = useState('');
 
@@ -52,60 +68,37 @@ export default function Dashboard({ user }) {
     fetchMyListings();
   }, []);
 
-  // Donor Action: Delete listing
-  const handleDelete = async (id) => {
+  // Runs an action, shows its result, then refreshes the lists
+  const runAction = async (request, successMessage, fallbackError) => {
+    setActionError('');
+    setActionSuccess('');
+    try {
+      await request();
+      setActionSuccess(successMessage);
+      if (!isDonor) fetchAvailableListings();
+      fetchMyListings();
+    } catch (err) {
+      setActionError(err.response?.data?.message || fallbackError);
+    }
+  };
+
+  const handleDelete = (id) => {
     if (!window.confirm('Are you sure you want to delete this listing?')) return;
-    setActionError('');
-    setActionSuccess('');
-    try {
-      await api.delete(`/listings/${id}`);
-      setActionSuccess('Listing deleted successfully.');
-      fetchMyListings();
-    } catch (err) {
-      setActionError(err.response?.data?.message || 'Failed to delete listing.');
-    }
+    runAction(() => api.delete(`/listings/${id}`), 'Listing deleted.', 'Failed to delete listing.');
   };
 
-  // Donor Action: Mark picked up
-  const handleMarkPickedUp = async (id) => {
-    setActionError('');
-    setActionSuccess('');
-    try {
-      await api.post(`/listings/${id}/pickup`);
-      setActionSuccess('Marked as picked up!');
-      fetchMyListings();
-    } catch (err) {
-      setActionError(err.response?.data?.message || 'Failed to mark as picked up.');
-    }
-  };
+  const handleMarkPickedUp = (id) =>
+    runAction(() => api.post(`/listings/${id}/pickup`), 'Marked as picked up.', 'Failed to mark as picked up.');
 
-  // NGO Action: Claim listing
-  const handleClaim = async (id) => {
-    setActionError('');
-    setActionSuccess('');
-    try {
-      await api.post(`/listings/${id}/claim`);
-      setActionSuccess('Listing claimed successfully!');
-      fetchAvailableListings();
-      fetchMyListings();
-    } catch (err) {
-      setActionError(err.response?.data?.message || 'Could not claim listing.');
-    }
-  };
+  const handleClaim = (id) =>
+    runAction(
+      () => api.post(`/listings/${id}/claim`),
+      'Listing claimed. Contact the donor to arrange pickup.',
+      'Could not claim listing.'
+    );
 
-  // NGO Action: Unclaim listing
-  const handleUnclaim = async (id) => {
-    setActionError('');
-    setActionSuccess('');
-    try {
-      await api.post(`/listings/${id}/unclaim`);
-      setActionSuccess('Listing unclaimed successfully.');
-      fetchAvailableListings();
-      fetchMyListings();
-    } catch (err) {
-      setActionError(err.response?.data?.message || 'Failed to unclaim listing.');
-    }
-  };
+  const handleUnclaim = (id) =>
+    runAction(() => api.post(`/listings/${id}/unclaim`), 'Claim released.', 'Failed to unclaim listing.');
 
   const handleCitySearch = (e) => {
     e.preventDefault();
@@ -113,154 +106,87 @@ export default function Dashboard({ user }) {
     fetchAvailableListings(cityFilter);
   };
 
+  const clearCity = () => {
+    setCityFilter('');
+    fetchAvailableListings('');
+  };
+
   return (
-    <main className="container" style={{ padding: '2rem 0' }}>
-      {actionError && <div className="error-message">{actionError}</div>}
+    <main className="container page">
+      <div className="page-header">
+        <div>
+          <h1>{isDonor ? 'Your donations' : 'Find surplus food'}</h1>
+          <p>
+            {isDonor
+              ? 'Post surplus food and track each listing until it is collected.'
+              : 'Claim available food nearby and keep track of your pickups.'}
+          </p>
+        </div>
+        {isDonor && (
+          <Link to="/listings/new" className="btn btn-primary">
+            <Icon name="plus" size={18} />
+            Post surplus food
+          </Link>
+        )}
+      </div>
+
+      {actionError && (
+        <div className="alert alert-error" role="alert">
+          <Icon name="alert" size={18} />
+          {actionError}
+        </div>
+      )}
       {actionSuccess && (
-        <div style={{ color: '#2e7d32', backgroundColor: '#e8f5e9', border: '1px solid #c8e6c9', padding: '0.75rem 1rem', borderRadius: '4px', marginBottom: '1.25rem' }}>
+        <div className="alert alert-success" role="status">
+          <Icon name="check" size={18} />
           {actionSuccess}
         </div>
       )}
 
       {isDonor ? (
-        /* ================= DONOR DASHBOARD ================= */
-        <section>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-            <div>
-              <h2 style={{ marginBottom: '0.25rem' }}>Donor Dashboard</h2>
-              <p style={{ margin: 0, color: 'var(--pico-muted-color)' }}>
-                Manage your food donations and mark collections.
-              </p>
-            </div>
-            <Link to="/listings/new" role="button">
-              + Post surplus food
-            </Link>
-          </div>
-
-          <h3>My Listings</h3>
-          {loadingMine ? (
-            <p aria-busy="true">Loading your listings...</p>
-          ) : myListings.length === 0 ? (
-            <p>No listings yet. Click "+ Post surplus food" above to create one.</p>
-          ) : (
-            <div className="card-grid">
-              {myListings.map((listing) => (
-                <ListingCard key={listing._id} listing={listing}>
-                  {listing.status === 'available' && (
-                    <>
-                      <Link
-                        to={`/listings/${listing._id}/edit`}
-                        role="button"
-                        className="secondary outline"
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        type="button"
-                        className="contrast outline"
-                        onClick={() => handleDelete(listing._id)}
-                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}
-                      >
-                        Delete
-                      </button>
-                    </>
-                  )}
-                  {listing.status === 'claimed' && (
-                    <button
-                      type="button"
-                      onClick={() => handleMarkPickedUp(listing._id)}
-                      style={{ padding: '0.4rem 0.8rem', fontSize: '0.9rem' }}
-                    >
-                      Mark picked up
-                    </button>
-                  )}
-                </ListingCard>
+        <>
+          {!loadingMine && myListings.length > 0 && (
+            <div className="summary">
+              {STATUSES.map(([key, label]) => (
+                <div key={key} className="summary-item">
+                  <span>
+                    <i className={`dot dot-${key}`} />
+                    {label}
+                  </span>
+                  <strong>{myListings.filter((l) => l.status === key).length}</strong>
+                </div>
               ))}
             </div>
           )}
-        </section>
-      ) : (
-        /* ================= NGO DASHBOARD ================= */
-        <section>
-          <div style={{ marginBottom: '2rem' }}>
-            <h2>NGO Dashboard</h2>
-            <p style={{ color: 'var(--pico-muted-color)' }}>
-              Browse nearby surplus food to claim, or review your active claims.
-            </p>
-          </div>
 
-          {/* Available Food Section */}
-          <div style={{ marginBottom: '3rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-              <h3 style={{ margin: 0 }}>Available Food</h3>
-              <form onSubmit={handleCitySearch} style={{ display: 'flex', gap: '0.5rem', margin: 0 }}>
-                <input
-                  type="text"
-                  placeholder="Filter by city..."
-                  value={cityFilter}
-                  onChange={(e) => setCityFilter(e.target.value)}
-                  style={{ marginBottom: 0, width: '200px' }}
-                />
-                <button type="submit" className="outline" style={{ marginBottom: 0, padding: '0.4rem 0.8rem' }}>
-                  Filter
-                </button>
-                {cityFilter && (
-                  <button
-                    type="button"
-                    className="secondary outline"
-                    style={{ marginBottom: 0, padding: '0.4rem 0.8rem' }}
-                    onClick={() => {
-                      setCityFilter('');
-                      fetchAvailableListings('');
-                    }}
-                  >
-                    Clear
-                  </button>
-                )}
-              </form>
-            </div>
-
-            {loadingAvailable ? (
-              <p aria-busy="true">Loading available food listings...</p>
-            ) : availableListings.length === 0 ? (
-              <p>No available listings found in this city right now.</p>
-            ) : (
-              <div className="card-grid">
-                {availableListings.map((listing) => (
-                  <ListingCard key={listing._id} listing={listing}>
-                    <button
-                      type="button"
-                      onClick={() => handleClaim(listing._id)}
-                      style={{ width: '100%' }}
-                    >
-                      Claim
-                    </button>
-                  </ListingCard>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* My Claims Section */}
           <section>
-            <h3>My Claims</h3>
+            <div className="section-head">
+              <h2>My listings</h2>
+            </div>
             {loadingMine ? (
-              <p aria-busy="true">Loading your claims...</p>
+              <p className="loading" aria-busy="true">Loading your listings…</p>
             ) : myListings.length === 0 ? (
-              <p>You haven't claimed any listings yet.</p>
+              <EmptyState>You haven't posted any food yet. Use “Post surplus food” to create your first listing.</EmptyState>
             ) : (
               <div className="card-grid">
                 {myListings.map((listing) => (
-                  <ListingCard key={listing._id} listing={listing}>
+                  <ListingCard key={listing._id} listing={listing} contact="claimer">
+                    {listing.status === 'available' && (
+                      <>
+                        <Link to={`/listings/${listing._id}/edit`} className="btn btn-secondary btn-sm">
+                          <Icon name="edit" size={15} />
+                          Edit
+                        </Link>
+                        <button type="button" className="btn btn-danger btn-sm" onClick={() => handleDelete(listing._id)}>
+                          <Icon name="trash" size={15} />
+                          Delete
+                        </button>
+                      </>
+                    )}
                     {listing.status === 'claimed' && (
-                      <button
-                        type="button"
-                        className="secondary outline"
-                        onClick={() => handleUnclaim(listing._id)}
-                        style={{ width: '100%' }}
-                      >
-                        Unclaim
+                      <button type="button" className="btn btn-primary btn-sm" onClick={() => handleMarkPickedUp(listing._id)}>
+                        <Icon name="check" size={15} />
+                        Mark picked up
                       </button>
                     )}
                   </ListingCard>
@@ -268,7 +194,81 @@ export default function Dashboard({ user }) {
               </div>
             )}
           </section>
-        </section>
+        </>
+      ) : (
+        <>
+          <section className="block">
+            <div className="section-head">
+              <h2>
+                Available food
+                {!loadingAvailable && <span className="count">{availableListings.length}</span>}
+              </h2>
+              <form className="search" onSubmit={handleCitySearch}>
+                <div className="search-field">
+                  <Icon name="search" size={16} />
+                  <input
+                    type="text"
+                    placeholder="Filter by city"
+                    aria-label="Filter by city"
+                    value={cityFilter}
+                    onChange={(e) => setCityFilter(e.target.value)}
+                  />
+                </div>
+                <button type="submit" className="btn btn-secondary">
+                  Search
+                </button>
+                {cityFilter && (
+                  <button type="button" className="btn btn-ghost" onClick={clearCity}>
+                    Clear
+                  </button>
+                )}
+              </form>
+            </div>
+
+            {loadingAvailable ? (
+              <p className="loading" aria-busy="true">Loading available food…</p>
+            ) : availableListings.length === 0 ? (
+              <EmptyState>No food is available {cityFilter ? `in ${cityFilter}` : ''} right now. Check back soon.</EmptyState>
+            ) : (
+              <div className="card-grid">
+                {availableListings.map((listing) => (
+                  <ListingCard key={listing._id} listing={listing} contact="donor">
+                    <button type="button" className="btn btn-primary btn-block" onClick={() => handleClaim(listing._id)}>
+                      Claim this food
+                    </button>
+                  </ListingCard>
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section>
+            <div className="section-head">
+              <h2>
+                My claims
+                {!loadingMine && <span className="count">{myListings.length}</span>}
+              </h2>
+            </div>
+            {loadingMine ? (
+              <p className="loading" aria-busy="true">Loading your claims…</p>
+            ) : myListings.length === 0 ? (
+              <EmptyState>You haven't claimed any food yet.</EmptyState>
+            ) : (
+              <div className="card-grid">
+                {myListings.map((listing) => (
+                  <ListingCard key={listing._id} listing={listing} contact="donor">
+                    {listing.status === 'claimed' && (
+                      <button type="button" className="btn btn-secondary btn-block" onClick={() => handleUnclaim(listing._id)}>
+                        <Icon name="undo" size={15} />
+                        Release claim
+                      </button>
+                    )}
+                  </ListingCard>
+                ))}
+              </div>
+            )}
+          </section>
+        </>
       )}
     </main>
   );

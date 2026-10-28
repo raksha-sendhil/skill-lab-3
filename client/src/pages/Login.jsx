@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
+import Icon from '../components/Icon';
 
 export default function Login({ onLogin }) {
   const navigate = useNavigate();
@@ -24,19 +25,28 @@ export default function Login({ onLogin }) {
       onLogin(res.data.token, res.data.user);
       navigate('/dashboard');
     } catch (err) {
-      setError(
-        err.response?.data?.message || 'Login failed. Please check your credentials.'
-      );
+      setError(err.response?.data?.message || 'Login failed. Please check your credentials.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <main className="container" style={{ maxWidth: '500px', padding: '2rem 0' }}>
-      <article>
-        <h2>Login</h2>
-        {error && <div className="error-message">{error}</div>}
+    <main className="auth-page">
+      <div className="auth-card">
+        <span className="brand-mark brand-mark-lg">
+          <Icon name="leaf" size={22} />
+        </span>
+        <h1>Welcome back</h1>
+        <p className="auth-sub">Log in to manage your donations and pickups.</p>
+
+        {error && (
+          <div className="alert alert-error" role="alert">
+            <Icon name="alert" size={18} />
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <label htmlFor="email">
             Email
@@ -47,7 +57,8 @@ export default function Login({ onLogin }) {
               value={formData.email}
               onChange={handleChange}
               required
-              placeholder="e.g. donor@example.com"
+              placeholder="you@example.com"
+              autoComplete="email"
             />
           </label>
 
@@ -60,20 +71,19 @@ export default function Login({ onLogin }) {
               value={formData.password}
               onChange={handleChange}
               required
+              autoComplete="current-password"
             />
           </label>
 
-          <button type="submit" aria-busy={loading} disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
+          <button type="submit" className="btn btn-primary btn-block btn-lg" aria-busy={loading} disabled={loading}>
+            {loading ? 'Logging in…' : 'Log in'}
           </button>
         </form>
 
-        <footer style={{ marginTop: '1rem', textAlign: 'center' }}>
-          <small>
-            Don't have an account? <Link to="/register">Register here</Link>
-          </small>
-        </footer>
-      </article>
+        <p className="auth-footer">
+          New here? <Link to="/register">Create an account</Link>
+        </p>
+      </div>
     </main>
   );
 }

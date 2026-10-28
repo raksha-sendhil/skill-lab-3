@@ -1,0 +1,113 @@
+/* Minimal Pico CSS overrides: badge colours, card grid, stats strip */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.listing-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  margin-bottom: 0;
+  height: 100%;
+}
+
+.listing-card header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--pico-muted-border-color, #e0e0e0);
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.badge-available {
+  background-color: #2e7d32;
+  color: #ffffff;
+}
+
+.badge-claimed {
+  background-color: #e65100;
+  color: #ffffff;
+}
+
+.badge-picked_up {
+  background-color: #1565c0;
+  color: #ffffff;
+}
+
+.badge-expired {
+  background-color: #757575;
+  color: #ffffff;
+}
+
+.food-type-tag {
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  background-color: var(--pico-secondary-background, #eceff1);
+  color: var(--pico-secondary-inverse, #37474f);
+  margin-right: 0.5rem;
+  text-transform: capitalize;
+}
+
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  background-color: var(--pico-card-background-color, #f4f6f8);
+  border: 1px solid var(--pico-card-border-color, #e0e0e0);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.stat-item h3 {
+  margin: 0;
+  font-size: 1.8rem;
+  color: var(--pico-primary, #00897b);
+}
+
+.stat-item p {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.85rem;
+  color: var(--pico-muted-color, #616161);
+}
+
+.error-message {
+  color: #c62828;
+  background-color: #ffebee;
+  border: 1px solid #ffcdd2;
+  padding: 0.75rem 1rem;
+  border-radius: 4px;
+  margin-bottom: 1.25rem;
+}
+
+.listing-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.listing-actions button,
+.listing-actions a {
+  margin-bottom: 0;
+}
